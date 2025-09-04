@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上剪刀石頭布對戰</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .lobby-screen, .game-screen, .result-screen {
+            display: none;
+        }
+        
+        .lobby-screen.active, .game-screen.active, .result-screen.active {
+            display: block;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .input-group {
+            margin: 20px 0;
+        }
+        
+        input[type="text"] {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            margin: 0 10px;
+            min-width: 200px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        
+        .player {
+            flex: 1;
+            padding: 0 20px;
+        }
+        
+        .player-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .player-status {
+            font-size: 1em;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .waiting { background: #ffc107; color: white; }
+        .ready { background: #28a745; color: white; }
+        .choosing { background: #17a2b8; color: white; }
+        
+        .choices {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+        
+        .choice-btn {
+            background: #fff;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .choice-btn:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .choice-btn.selected {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+        
+        .countdown {
+            font-size: 4em;
+            font-weight: bold;
+            color: #dc3545;
+            margin: 30px 0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .result-display {
+            margin: 30px 0;
+            font-size: 1.5em;
+        }
+        
+        .choices-reveal {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        
+        .choice-display {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .choice-emoji {
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+        
+        .choice-name {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .win { color: #28a745; }
+        .lose { color: #dc3545; }
+        .tie { color: #ffc107; }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .connected { background: #28a745; color: white; }
+        .disconnected { background: #dc3545; color: white; }
+        
+        .room-id {
+            background: #e9ecef;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 1.1em;
+            letter-spacing: 2px;
+        }
+        
+        .share-room {
+            background: #28a745;
+            margin: 10px 5px;
+        }
+        
+        .share-room:hover {
+            background: #218838;
+        }
+        
+        .loading {
+            display: inline-block;
+            margin: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .choices {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .choice-btn {
+                min-width: 100px;
+                min-height: 100px;
+                font-size: 2.5em;
+            }
+            
+            .player-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .game-container {
+                margin: 10px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">連接中...</div>
+    
+    <div class="game-container">
+        <!-- 大廳畫面 -->
+        <div class="lobby-screen active" id="lobbyScreen">
+            <h1>🎮 線上剪刀石頭布</h1>
+            
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="輸入你的暱稱" maxlength="20">
+            </div>
+            
+            <div class="input-group">
+                <button onclick="createRoom()">創建房間</button>
+                <button onclick="showJoinRoom()">加入房間</button>
+            </div>
+            
+            <div id="joinRoomDiv" style="display: none;">
+                <div class="input-group">
+                    <input type="text" id="roomId" placeholder="輸入房間 ID" maxlength="10">
+                    <button onclick="joinRoom()">加入</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 遊戲畫面 -->
+        <div class="game-screen" id="gameScreen">
+            <h1>🎮 對戰中</h1>
+            
+            <div class="room-id">
+                房間 ID: <span id="currentRoomId"></span>
+                <button class="share-room" onclick="shareRoom()">分享房間</button>
+            </div>
+            
+            <div class="player-info">
+                <div class="player">
+                    <div class="player-name" id="player1Name">玩家 1</div>
+                    <div class="player-status waiting" id="player1Status">等待中</div>
+                </div>
+                <div style="align-self: center; font-size: 2em;">VS</div>
+                <div class="player">
+                    <div class="player-name" id="player2Name">玩家 2</div>
+                    <div class="player-status waiting" id="player2Status">等待對手</div>
+                </div>
+            </div>
+            
+            <div class="countdown" id="countdown"></div>
+            
+            <div class="choices" id="choicesDiv">
+                <button class="choice-btn" onclick="makeChoice('rock')" id="rockBtn" title="石頭">🗿</button>
+                <button class="choice-btn" onclick="makeChoice('paper')" id="paperBtn" title="布">📄</button>
+                <button class="choice-btn" onclick="makeChoice('scissors')" id="scissorsBtn" title="剪刀">✂️</button>
+            </div>
+            
+            <button onclick="leaveRoom()" style="background: #dc3545;">離開房間</button>
+        </div>
+        
+        <!-- 結果畫面 -->
+        <div class="result-screen" id="resultScreen">
+            <h1>⚡ 對戰結果</h1>
+            
+            <div class="choices-reveal">
+                <div class="choice-display">
+                    <div id="player1Choice" class="choice-emoji">❓</div>
+                    <div class="choice-name" id="player1ChoiceName">選擇中</div>
+                    <div class="player-name" id="resultPlayer1Name">玩家 1</div>
+                </div>
+                <div style="align-self: center; font-size: 2em;">VS</div>
+                <div class="choice-display">
+                    <div id="player2Choice" class="choice-emoji">❓</div>
+                    <div class="choice-name" id="player2ChoiceName">選擇中</div>
+                    <div class="player-name" id="resultPlayer2Name">玩家 2</div>
+                </div>
+            </div>
+            
+            <div class="result-display" id="gameResult"></div>
+            
+            <button onclick="playAgain()">再玩一次</button>
+            <button onclick="leaveRoom()" style="background: #dc3545;">離開房間</button>
+        </div>
+    </div>
+
+    <!-- Socket.io 客戶端 -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 遊戲變數
+        let socket = null;
+        let currentRoom = null;
+        let currentPlayer = null;
+        let selectedChoice = null;
+        
+        const choices = {
+            rock: { name: '石頭', emoji: '🗿' },
+            paper: { name: '布', emoji: '📄' },
+            scissors: { name: '剪刀', emoji: '✂️' }
+        };
+        
+        // 初始化 Socket.io 連接
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                console.log('已連接到伺服器');
+                updateConnectionStatus(true);
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('與伺服器斷線');
+                updateConnectionStatus(false);
+            });
+            
+            // 伺服器事件監聽
+            socket.on('roomCreated', handleRoomCreated);
+            socket.on('roomJoined', handleRoomJoined);
+            socket.on('gameReady', handleGameReady);
+            socket.on('playerReady', handlePlayerReady);
+            socket.on('countdown', handleCountdown);
+            socket.on('gameResult', handleGameResult);
+            socket.on('playerLeft', handlePlayerLeft);
+            socket.on('error', handleError);
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = connected ? '已連接' : '連接中斷';
+            statusEl.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+        }
+        
+        // 事件處理函數
+        function handleRoomCreated(data) {
+            currentRoom = data.roomId;
+            document.getElementById('currentRoomId').textContent = data.roomId;
+            updatePlayerInfo(data.players);
+            showScreen('game');
+        }
+        
+        function handleRoomJoined(data) {
+            currentRoom = data.roomId;
+            document.getElementById('currentRoomId').textContent = data.roomId;
+            updatePlayerInfo(data.players);
+            showScreen('game');
+        }
+        
+        function handleGameReady(data) {
+            updatePlayerInfo(data.players);
+            enableChoices();
+            document.getElementById('countdown').textContent = '選擇你的武器！';
+        }
+        
+        function handlePlayerReady(data) {
+            updatePlayerInfo(data.players);
+        }
+        
+        function handleCountdown(data) {
+            document.getElementById('countdown').textContent = data.message;
+            if (data.count <= 0) {
+                disableChoices();
+            }
+        }
+        
+        function handleGameResult(data) {
+            showResult(data.players, data.result);
+        }
+        
+        function handlePlayerLeft(data) {
+            if (data.players.length < 2) {
+                alert('對手已離開房間');
+                showScreen('lobby');
+            } else {
+                updatePlayerInfo(data.players);
+            }
+        }
+        
+        function handleError(data) {
+            alert(data.message);
+        }
+        
+        // 遊戲功能
+        function createRoom() {
+            const playerName = document.getElementById('playerName').value.trim();
+            if (!playerName) {
+                alert('請輸入暱稱');
+                return;
+            }
+            
+            currentPlayer = {
+                name: playerName
+            };
+            
+            socket.emit('createRoom', {
+                playerName: playerName
+            });
+        }
+        
+        function showJoinRoom() {
+            document.getElementById('joinRoomDiv').style.display = 'block';
+        }
+        
+        function joinRoom() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const roomId = document.getElementById('roomId').value.trim().toUpperCase();
+            
+            if (!playerName) {
+                alert('請輸入暱稱');
+                return;
+            }
+            
+            if (!roomId) {
+                alert('請輸入房間 ID');
+                return;
+            }
+            
+            currentPlayer = {
+                name: playerName
+            };
+            
+            socket.emit('joinRoom', {
+                playerName: playerName,
+                roomId: roomId
+            });
+        }
+        
+        function makeChoice(choice) {
+            if (selectedChoice) return;
+            
+            selectedChoice = choice;
+            
+            // 視覺反饋
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById(choice + 'Btn').classList.add('selected');
+            
+            socket.emit('makeChoice', {
+                choice: choice
+            });
+        }
+        
+        function updatePlayerInfo(players) {
+            const player1 = players[0];
+            const player2 = players[1];
+            
+            document.getElementById('player1Name').textContent = player1.name;
+            document.getElementById('player1Status').textContent = player1.ready ? '已選擇' : '選擇中';
+            document.getElementById('player1Status').className = `player-status ${player1.ready ? 'ready' : 'choosing'}`;
+            
+            if (player2) {
+                document.getElementById('player2Name').textContent = player2.name;
+                document.getElementById('player2Status').textContent = player2.ready ? '已選擇' : '選擇中';
+                document.getElementById('player2Status').className = `player-status ${player2.ready ? 'ready' : 'choosing'}`;
+            } else {
+                document.getElementById('player2Name').textContent = '等待玩家加入...';
+                document.getElementById('player2Status').textContent = '等待中';
+                document.getElementById('player2Status').className = 'player-status waiting';
+            }
+        }
+        
+        function showResult(players, result) {
+            const [player1, player2] = players;
+            
+            // 更新結果畫面
+            document.getElementById('resultPlayer1Name').textContent = player1.name;
+            document.getElementById('resultPlayer2Name').textContent = player2.name;
+            
+            document.getElementById('player1Choice').textContent = choices[player1.choice].emoji;
+            document.getElementById('player1ChoiceName').textContent = choices[player1.choice].name;
+            
+            document.getElementById('player2Choice').textContent = choices[player2.choice].emoji;
+            document.getElementById('player2ChoiceName').textContent = choices[player2.choice].name;
+            
+            let resultText = '';
+            let resultClass = '';
+            
+            if (result === 'tie') {
+                resultText = '平手！🤝';
+                resultClass = 'tie';
+            } else {
+                // 判斷當前玩家是否勝利
+                const isCurrentPlayerWinner = 
+                    (result === 'player1' && player1.name === currentPlayer.name) ||
+                    (result === 'player2' && player2.name === currentPlayer.name);
+                
+                if (isCurrentPlayerWinner) {
+                    resultText = '你贏了！🎉';
+                    resultClass = 'win';
+                } else {
+                    resultText = '你輸了！😤';
+                    resultClass = 'lose';
+                }
+            }
+            
+            document.getElementById('gameResult').innerHTML = `<div class="${resultClass}">${resultText}</div>`;
+            
+            showScreen('result');
+        }
+        
+        function playAgain() {
+            selectedChoice = null;
+            socket.emit('playAgain');
+            showScreen('game');
+        }
+        
+        function leaveRoom() {
+            if (currentRoom) {
+                socket.emit('leaveRoom');
+            }
+            
+            currentRoom = null;
+            currentPlayer = null;
+            selectedChoice = null;
+            showScreen('lobby');
+            
+            // 清空輸入框
+            document.getElementById('roomId').value = '';
+            document.getElementById('joinRoomDiv').style.display = 'none';
+        }
+        
+        function shareRoom() {
+            if (currentRoom) {
+                if (navigator.share) {
+                    navigator.share({
+                        title: '線上剪刀石頭布',
+                        text: `來和我玩剪刀石頭布吧！房間 ID: ${currentRoom}`,
+                        url: window.location.href
+                    });
+                } else {
+                    // 複製到剪貼板
+                    const text = `來和我玩線上剪刀石頭布吧！\n房間 ID: ${currentRoom}\n網址: ${window.location.href}`;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('房間資訊已複製到剪貼板！');
+                    }).catch(() => {
+                        prompt('複製房間資訊:', text);
+                    });
+                }
+            }
+        }
+        
+        function enableChoices() {
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('selected');
+            });
+            selectedChoice = null;
+        }
+        
+        function disableChoices() {
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+        }
+        
+        function showScreen(screen) {
+            document.querySelectorAll('.lobby-screen, .game-screen, .result-screen').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(screen + 'Screen').classList.add('active');
+        }
+        
+        // 鍵盤快捷鍵
+        document.addEventListener('keydown', function(event) {
+            if (document.querySelector('.game-screen.active')) {
+                switch(event.key.toLowerCase()) {
+                    case 'r':
+                        if (!selectedChoice) makeChoice('rock');
+                        break;
+                    case 'p':
+                        if (!selectedChoice) makeChoice('paper');
+                        break;
+                    case 's':
+                        if (!selectedChoice) makeChoice('scissors');
+                        break;
+                }
+            }
+        });
+        
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initSocket();
+        });
+    </script>
+</body>
+</html>
